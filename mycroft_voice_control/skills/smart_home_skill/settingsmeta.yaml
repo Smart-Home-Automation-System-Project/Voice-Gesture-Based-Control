@@ -1,0 +1,9 @@
+fields:
+  - name: "mqtt_host"
+    type: "text"
+    label: "MQTT Broker Host"
+    value: "localhost"
+  - name: "mqtt_port"
+    type: "number"
+    label: "MQTT Broker Port"
+    value: 1883
