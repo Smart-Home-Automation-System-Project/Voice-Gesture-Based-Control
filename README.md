@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 mycroft_voice_control/
 │
 ├── skills/
@@ -21,3 +22,6 @@ mycroft_voice_control/
 │   └── mycroft.conf                # Mycroft configuration
 │
 └── start_mycroft.sh                # Launch script
+=======
+# Voice-Gesture-Based-Control
+>>>>>>> b29ee365e6cad6dd3a1de5f5a065723db1d9dfe7
