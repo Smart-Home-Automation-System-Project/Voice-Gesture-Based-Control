@@ -1,0 +1,8 @@
+Thumb up: Lights ON
+Thumb down: Lights OFF
+Open palm: Door OPEN
+Closed fist: Door CLOSE
+Number 1 (index finger only): Temperature UP
+Number 2 (peace sign): Temperature DOWN
+Number 3 (index, middle, ring extended): Microwave ON
+Rock On (index and pinky extended): Microwave OFF
