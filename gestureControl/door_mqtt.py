@@ -117,7 +117,15 @@ def debug_finger_positions(hand_landmarks, image):
         cv2.putText(image, f"{finger}: {y_val:.2f}", 
                     (10, debug_y + 20 + i * 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-def main():
+def main(mqtt_client=None):
+    # Use the provided MQTT client or create a new one
+    global client
+    client = mqtt_client or mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+    client.on_connect = on_connect
+    client.on_publish = on_publish
+    client.connect(mqtt_broker, mqtt_port)
+    client.loop_start()  # Start the background thread
+
     # Open webcam
     cap = cv2.VideoCapture(0)
     
@@ -206,7 +214,11 @@ def main():
             cv2.putText(image, f"Cooldown: {countdown}s", (image.shape[1] - 200, 30), 
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         
-        # Display MQTT status - FIXED LINE BELOW
+        # Display MQTT status
+        if client.is_connected():
+            mqtt_status = "Connected"
+        else:
+            mqtt_status = "Disconnected"
         cv2.putText(image, f"MQTT: {mqtt_status}", (10, 30), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
@@ -222,12 +234,6 @@ def main():
         
         # Display the image
         cv2.imshow('Door Control with Hand Gestures', image)
-        
-        # Update MQTT status - FIXED LINE BELOW
-        if client.is_connected():
-            mqtt_status = "Connected"
-        else:
-            mqtt_status = "Disconnected"
         
         # Process keyboard input
         key = cv2.waitKey(5) & 0xFF
