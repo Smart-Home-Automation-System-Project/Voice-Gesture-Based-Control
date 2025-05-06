@@ -2,7 +2,7 @@
 still it is implementing to work according to a wakeword.
 
 ## currently voiceControl.py file is working fine without wakeword.
-to check commands got by mqtt 
+to check commands got by mqtt :
 mosquitto_sub -h test.mosquitto.org -p 1883 -t "rhasspy/intent/recognized" -v
 
 ##
