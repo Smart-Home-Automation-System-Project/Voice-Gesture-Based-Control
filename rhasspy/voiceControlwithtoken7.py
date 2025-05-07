@@ -321,3 +321,34 @@ if __name__ == "__main__":
             print("\nExternal MQTT client stopped (was not connected or loop not started).")
 
         print("Script finished.")
+
+
+
+'''
+expected output :
+
+Listening for command (5 seconds)...
+Command recording finished.
+Sending command audio to Rhasspy STT...
+STT request sent. Status code: 200
+STT API Result (text): 'turn on l1'
+Sending text 'turn on l1' to Rhasspy NLU...
+NLU request sent. Status code: 200
+NLU API Result (JSON): {
+  "intent": {
+    "name": "TurnOnDevice",
+    "confidence": 1.0
+  },
+  "slots": {
+    "device": "l1"
+  },
+  ...
+}
+--- Recognized Intent ---
+Intent: TurnOnDevice
+Confidence: 1.0
+-------------------------
+Intent published to EXTERNAL MQTT topic rhasspy/intent/recognized: {"intent": "TurnOnDevice", "confidence": 1.0}
+Control message published to MQTT topic central_main/control: [{"category": "light", "client_id": "L-2025.04.19-21.09-0001", "name": "l1", "state": "on"}]
+
+'''
