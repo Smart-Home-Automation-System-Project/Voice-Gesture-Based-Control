@@ -1,3 +1,29 @@
+'''
+test Cases :
+
+1. Tests the case where the external MQTT client is connected (is_connected returns True) and the publish method succeeds (rc == 0).
+Expected result: The function returns True.
+test_publish_intent_external_failure_not_connected:
+
+2. Tests the case where the external MQTT client is not connected (is_connected returns False).
+Expected result: The function returns False.
+test_publish_intent_external_failure_publish_error:
+
+3. Tests the case where the external MQTT client is connected (is_connected returns True), but the publish method fails (rc != 0).
+Expected result: The function returns False.
+test_publish_intent_external_invalid_confidence:
+
+4. Tests the case where the confidence parameter is invalid (e.g., a string instead of a numeric value). However, the function does not validate the confidence type, so it proceeds to publish the message.
+Expected result: The function returns True (assuming publish succeeds).
+test_publish_intent_external_empty_intent_name:
+
+5. Tests the case where the intent_name parameter is an empty string. The function does not validate the intent_name, so it proceeds to publish the message.
+Expected result: The function returns True (assuming publish succeeds).
+test_publish_intent_external_null_client:
+
+6. Tests the case where the external_mqtt_client is None.
+Expected result: The function returns False.'''
+
 import unittest
 from unittest.mock import MagicMock
 import json

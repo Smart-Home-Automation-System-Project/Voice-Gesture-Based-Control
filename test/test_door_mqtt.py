@@ -1,3 +1,22 @@
+'''
+test cases:
+
+1. test_main_mqtt_connection
+    - Tests the MQTT connection functionality in the `main` function.
+    - Mocks the MQTT client and verifies that the appropriate methods (`connect`, `loop_start`, `loop_stop`, `disconnect`) are called.
+    - Simulates one loop iteration of video capture and ensures the program behaves as expected.
+
+2. test_main_video_capture_failure
+    - Tests the behavior of the `main` function when video capture fails.
+    - Mocks the video capture object to simulate a failure in reading frames.
+    - Verifies that the video capture instance is released properly.
+
+3. test_main_debug_toggle
+    - Tests the debug toggle functionality in the `main` function.
+    - Simulates pressing the 'D' key to toggle debug mode and the ESC key to exit.
+    - Verifies that the video capture instance is released properly.
+
+'''
 import sys
 import os
 from unittest.mock import patch, MagicMock
