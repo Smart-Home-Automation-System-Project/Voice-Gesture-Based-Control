@@ -8,8 +8,8 @@ def on_message(client, userdata, msg, properties=None):
 def on_connect(client, userdata, flags, rc, properties=None):
     print(f"Connected with result code {rc}")
     # Subscribe to the door control topic
-    client.subscribe("home/automation/Door1_control")
-    print("Subscribed to home/automation/Door1_control")
+    client.subscribe("central_main/control")
+    print("Subscribed to central_main/control")
     print("Waiting for messages...")
 
 # Create client instance with correct API version
