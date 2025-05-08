@@ -60,5 +60,21 @@ class TestDoorMQTT(unittest.TestCase):
             mock_video_instance.release.assert_called_once()
 
 if __name__ == '__main__':
-    # Run the tests with verbosity set to 2 for detailed output
-    unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(TestDoorMQTT))
+    class CustomTestResult(unittest.TextTestResult):
+        def addSuccess(self, test):
+            super().addSuccess(test)
+            print(f"PASS: {test._testMethodName}")
+
+        def addFailure(self, test, err):
+            super().addFailure(test, err)
+            print(f"FAIL: {test._testMethodName}")
+
+        def addError(self, test, err):
+            super().addError(test, err)
+            print(f"ERROR: {test._testMethodName}")
+
+    class CustomTestRunner(unittest.TextTestRunner):
+        resultclass = CustomTestResult
+
+    suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestDoorMQTT)
+    CustomTestRunner(verbosity=0).run(suite)
