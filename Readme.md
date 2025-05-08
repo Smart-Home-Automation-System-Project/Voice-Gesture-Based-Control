@@ -59,3 +59,10 @@ pip install paho-mqtt
 
 ## to check commands got by mqtt 
 mosquitto_sub -h test.mosquitto.org -p 1883 -t "rhasspy/intent/recognized" -v
+
+
+
+
+##regarding the sentences.ini file:
+contains intents identify by the rhaspy
+go to rhaspy webUI -> sentence Tab.. and copy this file to there

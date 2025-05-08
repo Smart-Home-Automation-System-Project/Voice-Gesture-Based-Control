@@ -15,7 +15,7 @@ STT_ENDPOINT = f"{RHASSPY_URL}/api/speech-to-text"
 NLU_ENDPOINT = f"{RHASSPY_URL}/api/text-to-intent"
 
 # External MQTT (for publishing results)
-EXTERNAL_MQTT_BROKER = "test.mosquitto.org"
+EXTERNAL_MQTT_BROKER = "broker.hivemq.com" #"test.mosquitto.org" #"localhost"
 EXTERNAL_MQTT_PORT = 1883
 EXTERNAL_MQTT_INTENT_TOPIC = "rhasspy/intent/recognized"
 
