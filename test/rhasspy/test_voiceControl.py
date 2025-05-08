@@ -32,7 +32,7 @@ import os
 import io
 
 # Add parent folder to path so "rhasspy" package can be imported
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from rhasspy import voiceControl
 
