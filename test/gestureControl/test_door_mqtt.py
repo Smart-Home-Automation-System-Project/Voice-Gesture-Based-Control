@@ -24,7 +24,7 @@ import unittest
 import numpy as np  # Import NumPy to create mock images
 
 # Add the parent directory of 'gestureControl' to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..')))
 
 from gestureControl.door_mqtt import main
 
