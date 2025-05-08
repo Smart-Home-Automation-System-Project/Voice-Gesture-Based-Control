@@ -19,7 +19,10 @@ mp_drawing = mp.solutions.drawing_utils
 # MQTT Configuration
 mqtt_broker = "test.mosquitto.org"  # Public MQTT broker for testing
 mqtt_port = 1883
-mqtt_topic = "home/automation/Door1_control"
+mqtt_topic = "central_main/control"  # Updated topic for central system
+
+# Device configuration
+door_name = "Font Door"  # Name of the door to control
 
 # MQTT Callbacks
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -177,28 +180,26 @@ def main(mqtt_client=None):
                 if current_time - last_command_time > cooldown:
                     # Check gestures with debug info
                     if is_thumb_up(hand_landmarks, image):
-                        action_text = "OPENING DOOR"
+                        action_text = "UNLOCKING DOOR"
                         text_display_end = current_time + 2
                         last_command_time = current_time
                         
-                        # Send MQTT message for door open (unlock)
+                        # Send MQTT message for door unlock
                         mqtt_message = {
-                            "name": "Door1",
-                            "type": "Door",
-                            "value": 0  # 0 for unlock/open
+                            "name": door_name,
+                            "state": "unlock"  # "unlock" instead of 0
                         }
                         publish_message(mqtt_topic, mqtt_message)
                         
                     elif is_thumb_down(hand_landmarks, image):
-                        action_text = "CLOSING DOOR"
+                        action_text = "LOCKING DOOR"
                         text_display_end = current_time + 2
                         last_command_time = current_time
                         
-                        # Send MQTT message for door close (lock)
+                        # Send MQTT message for door lock
                         mqtt_message = {
-                            "name": "Door1",
-                            "type": "Door",
-                            "value": 1  # 1 for lock/close
+                            "name": door_name,
+                            "state": "lock"  # "lock" instead of 1
                         }
                         publish_message(mqtt_topic, mqtt_message)
         
@@ -227,9 +228,9 @@ def main(mqtt_client=None):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
         # Display legend for gestures
-        cv2.putText(image, "Thumb Up: Door OPEN", (10, image.shape[0] - 40), 
+        cv2.putText(image, "Thumb Up: Door UNLOCK", (10, image.shape[0] - 40), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(image, "Thumb Down: Door CLOSE", (10, image.shape[0] - 20), 
+        cv2.putText(image, "Thumb Down: Door LOCK", (10, image.shape[0] - 20), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
         # Display the image
