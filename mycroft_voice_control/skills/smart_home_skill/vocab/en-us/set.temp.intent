@@ -1,0 +1,4 @@
+set temperature to {temperature} degrees
+change temperature to {temperature}
+make it {temperature} degrees
+adjust to {temperature} degrees
