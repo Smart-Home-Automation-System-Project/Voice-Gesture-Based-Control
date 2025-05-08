@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import unittest
 
 # Add the parent directory to sys.path to enable import of the rhasspy package
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # Import the mqtt_subscriber module from the rhasspy package
 from rhasspy.mqtt_subscriber import on_connect
