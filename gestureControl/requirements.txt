@@ -1,0 +1,4 @@
+opencv-python==4.8.1
+mediapipe==0.10.9
+numpy==1.26.3
+paho-mqtt==2.2.1
