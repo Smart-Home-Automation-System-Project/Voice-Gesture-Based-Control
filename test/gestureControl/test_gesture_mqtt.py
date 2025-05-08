@@ -5,7 +5,7 @@ import unittest
 import numpy as np  # Import NumPy to create mock images
 
 # Add the parent directory of 'gestureControl' to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..')))
 
 from gestureControl.gesture_mqtt import main, is_thumb_up, is_thumb_down, is_open_palm, is_number_one, is_number_two, is_rock_on
 
