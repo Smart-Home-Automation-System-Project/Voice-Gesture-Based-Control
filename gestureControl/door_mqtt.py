@@ -17,7 +17,8 @@ hands = mp_hands.Hands(
 mp_drawing = mp.solutions.drawing_utils
 
 # MQTT Configuration
-mqtt_broker = "test.mosquitto.org"  # Public MQTT broker for testing
+#mqtt_broker = "test.mosquitto.org"  # Public MQTT broker for testing
+mqtt_broker = "mqtt.local"  # Local MQTT broker
 mqtt_port = 1883
 mqtt_topic = "central_main/control"  # Updated topic for central system
 
