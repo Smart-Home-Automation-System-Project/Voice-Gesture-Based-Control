@@ -1,4 +1,5 @@
-## main file is jarvis.py :
+## main file is jarvis.py(still in 0.9.9 version) : 
+(to run: pip install pocketsphinx)
 still it is implementing to work according to a wakeword.
 
 ## currently voiceControl.py file is working fine without wakeword.
@@ -69,5 +70,4 @@ go to rhaspy webUI -> sentence Tab.. and copy this file to there
 
 
 
-## for wakeWord:
-pip install openwakeword sounddevice numpy scipy paho-mqtt requests
+
