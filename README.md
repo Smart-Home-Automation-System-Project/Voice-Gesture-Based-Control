@@ -216,7 +216,7 @@ Windows
 
 Open Command Prompt
 Run the script:
-python gesture_control.py
+python gesture_mqtt.py
 To monitor MQTT messages (in a separate Command Prompt):
 python mqtt_listener.py (for this need to run gesture_mosquitto.py)
 -------------------
@@ -225,10 +225,10 @@ Ubuntu
 Open Terminal
 
 Make the scripts executable:
-bashchmod +x gesture_control.py mqtt_listener.py
+bashchmod +x gesture_mqtt.py mqtt_listener.py
 
 Run the main script:
-bashpython3 gesture_control.py
+bashpython3 gesture_mqtt.py
 
 To monitor MQTT messages (in a separate Terminal):
 bashpython3 mqtt_listener.py
