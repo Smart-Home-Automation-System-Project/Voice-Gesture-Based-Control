@@ -23,9 +23,10 @@ EXTERNAL_MQTT_PORT = 1883
 EXTERNAL_MQTT_INTENT_TOPIC = "rhasspy/intent/recognized"
 
 # Recording parameters
-SAMPLE_RATE = 16000  # Hz
+SAMPLE_RATE = 44100#16000  # Hz
 COMMAND_DURATION = 5 # Seconds to record command
 CHANNELS = 1       # mono
+INPUT_DEVICE_ID = 0 # <--- ADD THIS LINE (Use the device ID for your microphone)
 
 # --- MQTT Client ---
 external_mqtt_client = None
@@ -43,9 +44,11 @@ def on_publish_external(client, userdata, mid, reason_code, properties):
 
 # --- Audio & Processing Functions ---
 def record_audio(duration, samplerate, channels):
-    print(f"Listening for command ({duration} seconds)...")
+    # Use the globally defined INPUT_DEVICE_ID
+    print(f"Listening for command ({duration} seconds) on device ID {INPUT_DEVICE_ID}...")
     try:
-        recording = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=channels, dtype='int16')
+        # Pass the device ID to sd.rec()
+        recording = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=channels, dtype='int16', device=INPUT_DEVICE_ID)
         sd.wait()
         print("Command recording finished.")
         wav_buffer = io.BytesIO()

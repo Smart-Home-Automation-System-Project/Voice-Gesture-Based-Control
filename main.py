@@ -34,6 +34,10 @@ def start_voice_control():
         print(f"Error in Voice Control System: {e}")
 
 if __name__ == "__main__":
+    try:
+        multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        pass # If it's already been set or can't be set
     print("Smart Home Control System")
     print("Select control mode:")
     print("1. Gesture Control")

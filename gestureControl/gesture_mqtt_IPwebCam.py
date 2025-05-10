@@ -17,13 +17,15 @@ hands = mp_hands.Hands(
 mp_drawing = mp.solutions.drawing_utils
 
 # MQTT Configuration
-#mqtt_broker = "test.mosquitto.org"  # Public MQTT broker for testing
 mqtt_broker = "mqtt.localhost"  # Local MQTT broker
 mqtt_port = 1883
 mqtt_topic = "central_main/control"  # Updated topic for central system
 
 # Device configuration
 door_name = "Font Door"  # Name of the door to control
+
+# Video stream configuration
+STREAM_URL = "http://localhost:8080/video"  # IP Webcam MJPEG stream
 
 # MQTT Callbacks
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -60,17 +62,14 @@ def is_thumb_up(hand_landmarks, image):
     thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
     thumb_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP]
     
-    # More robust check for thumb up - check if it's significantly above other fingers
     index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
     middle_tip = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
     ring_tip = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP]
     pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
     
-    # Check if thumb is higher than other folded fingers and extended upward
     other_fingers_y = min(index_tip.y, middle_tip.y, ring_tip.y, pinky_tip.y)
     is_up = (thumb_tip.y < thumb_mcp.y) and (thumb_tip.y < other_fingers_y)
     
-    # Add debug text
     h, w, _ = image.shape
     text_y = 120
     cv2.putText(image, f"Thumb y: {thumb_tip.y:.2f}, Others min y: {other_fingers_y:.2f}", 
@@ -84,17 +83,14 @@ def is_thumb_down(hand_landmarks, image):
     thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
     thumb_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_MCP]
     
-    # Check other fingers position
     index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
     middle_tip = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
     ring_tip = hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP]
     pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
     
-    # Check if thumb is lower than other folded fingers and pointing downward
     other_fingers_y = max(index_tip.y, middle_tip.y, ring_tip.y, pinky_tip.y)
     is_down = (thumb_tip.y > thumb_mcp.y) and (thumb_tip.y > other_fingers_y)
     
-    # Add debug text
     text_y = 160
     cv2.putText(image, f"Thumb y: {thumb_tip.y:.2f}, Others max y: {other_fingers_y:.2f}", 
                 (10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
@@ -103,9 +99,7 @@ def is_thumb_down(hand_landmarks, image):
     
     return is_down
 
-# New gesture: Open palm (for switch all on)
 def is_open_palm(hand_landmarks, image):
-    # Get fingertips and knuckles
     fingertips = [
         hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP],
         hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP],
@@ -115,31 +109,25 @@ def is_open_palm(hand_landmarks, image):
     ]
     
     pip_joints = [
-        hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_IP],  # For thumb use IP
+        hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_IP],
         hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_PIP],
         hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_PIP],
         hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_PIP],
         hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_PIP]
     ]
     
-    # Check if all fingers are extended
     fingers_extended = []
     for i in range(5):
-        # Thumb is special case
         if i == 0:
-            # Check if thumb is extended to the side
             wrist = hand_landmarks.landmark[mp_hands.HandLandmark.WRIST]
             thumb_cmc = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_CMC]
             thumb_extended = calculate_distance(fingertips[i], wrist) > calculate_distance(thumb_cmc, wrist)
         else:
-            # For other fingers, check if fingertip is above PIP joint
             finger_extended = fingertips[i].y < pip_joints[i].y
             fingers_extended.append(finger_extended)
     
-    # Palm is open if at least 4 fingers are extended
     is_palm = sum(fingers_extended) >= 4
     
-    # Debug text
     text_y = 200
     cv2.putText(image, f"Fingers extended: {fingers_extended.count(True)}/4", 
                 (10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
@@ -148,9 +136,7 @@ def is_open_palm(hand_landmarks, image):
     
     return is_palm
 
-# New gesture: Number 1 (index finger up, for switch all off)
 def is_number_one(hand_landmarks, image):
-    # Get fingertips and PIP joints
     index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
     index_pip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_PIP]
     middle_tip = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
@@ -160,7 +146,6 @@ def is_number_one(hand_landmarks, image):
     pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
     pinky_pip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_PIP]
     
-    # Check if index finger is extended but others are not
     index_extended = index_tip.y < index_pip.y
     middle_folded = middle_tip.y > middle_pip.y
     ring_folded = ring_tip.y > ring_pip.y
@@ -168,7 +153,6 @@ def is_number_one(hand_landmarks, image):
     
     is_one = index_extended and middle_folded and ring_folded and pinky_folded
     
-    # Debug text
     text_y = 240
     cv2.putText(image, f"Index: {index_extended}, Others folded: {middle_folded and ring_folded and pinky_folded}", 
                 (10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
@@ -177,9 +161,7 @@ def is_number_one(hand_landmarks, image):
     
     return is_one
 
-# New gesture: Number 2 (victory sign, for light all on)
 def is_number_two(hand_landmarks, image):
-    # Get fingertips and PIP joints
     index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
     index_pip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_PIP]
     middle_tip = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
@@ -189,7 +171,6 @@ def is_number_two(hand_landmarks, image):
     pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
     pinky_pip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_PIP]
     
-    # Check if index and middle fingers are extended but others are not
     index_extended = index_tip.y < index_pip.y
     middle_extended = middle_tip.y < middle_pip.y
     ring_folded = ring_tip.y > ring_pip.y
@@ -197,7 +178,6 @@ def is_number_two(hand_landmarks, image):
     
     is_two = index_extended and middle_extended and ring_folded and pinky_folded
     
-    # Debug text
     text_y = 280
     cv2.putText(image, f"Index & Middle: {index_extended and middle_extended}, Others: {ring_folded and pinky_folded}", 
                 (10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 150, 0), 1)
@@ -206,9 +186,7 @@ def is_number_two(hand_landmarks, image):
     
     return is_two
 
-# New gesture: Rock on (pinky and index up, for light all off)
 def is_rock_on(hand_landmarks, image):
-    # Get fingertips and PIP joints
     index_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
     index_pip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_PIP]
     middle_tip = hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP]
@@ -218,7 +196,6 @@ def is_rock_on(hand_landmarks, image):
     pinky_tip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP]
     pinky_pip = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_PIP]
     
-    # Check if index and pinky fingers are extended but others are not
     index_extended = index_tip.y < index_pip.y
     middle_folded = middle_tip.y > middle_pip.y
     ring_folded = ring_tip.y > ring_pip.y
@@ -226,7 +203,6 @@ def is_rock_on(hand_landmarks, image):
     
     is_rock = index_extended and middle_folded and ring_folded and pinky_extended
     
-    # Debug text
     text_y = 320
     cv2.putText(image, f"Index & Pinky: {index_extended and pinky_extended}, Middle & Ring: {middle_folded and ring_folded}", 
                 (10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 255), 1)
@@ -236,7 +212,6 @@ def is_rock_on(hand_landmarks, image):
     return is_rock
 
 def debug_finger_positions(hand_landmarks, image):
-    # Display y-coordinates of fingertips for debugging
     fingertips = [
         ("Thumb", hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].y),
         ("Index", hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y),
@@ -262,9 +237,14 @@ def main(mqtt_client=None):
     client.connect(mqtt_broker, mqtt_port)
     client.loop_start()  # Start the background thread
 
-    # Open webcam
-    cap = cv2.VideoCapture(0)
+    # Open IP Webcam stream
+    print(f"Connecting to IP Webcam stream at {STREAM_URL}...")
+    cap = cv2.VideoCapture(STREAM_URL)
     
+    if not cap.isOpened():
+        print(f"Error: Could not open stream at {STREAM_URL}", file=sys.stderr)
+        return
+
     # Command cooldown to prevent multiple detections
     last_command_time = 0
     cooldown = 1.5  # seconds
@@ -279,168 +259,171 @@ def main(mqtt_client=None):
     # MQTT connection status display
     mqtt_status = "Connecting to MQTT..."
     
-    while cap.isOpened():
-        success, image = cap.read()
-        if not success:
-            print("Failed to read from webcam.")
-            break
-        
-        # Flip the image horizontally for a selfie-view display
-        image = cv2.flip(image, 1)
-        
-        # Convert the BGR image to RGB
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = hands.process(rgb_image)
-        
-        # Current time for cooldown
-        current_time = time.time()
-        
-        # Clear debug area
-        if debug_mode:
-            cv2.rectangle(image, (5, 100), (500, 480), (0, 0, 0), -1)
-        
-        # Draw hand landmarks
-        if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                mp_drawing.draw_landmarks(
-                    image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-                
-                # Display debug info for finger positions
-                if debug_mode:
-                    debug_finger_positions(hand_landmarks, image)
-                
-                # Gesture recognition
-                if current_time - last_command_time > cooldown:
-                    # Check gestures with debug info
-                    if is_thumb_up(hand_landmarks, image):
-                        action_text = "UNLOCKING DOOR"
-                        text_display_end = current_time + 2
-                        last_command_time = current_time
-                        
-                        # Send MQTT message for door unlock
-                        mqtt_message = {
-                            "name": door_name,
-                            "state": "unlock"
-                        }
-                        publish_message(mqtt_topic, mqtt_message)
-                        
-                    elif is_thumb_down(hand_landmarks, image):
-                        action_text = "LOCKING DOOR"
-                        text_display_end = current_time + 2
-                        last_command_time = current_time
-                        
-                        # Send MQTT message for door lock
-                        mqtt_message = {
-                            "name": door_name,
-                            "state": "lock"
-                        }
-                        publish_message(mqtt_topic, mqtt_message)
+    try:
+        while True:
+            success, image = cap.read()
+            if not success:
+                print("Failed to read from IP Webcam stream. Attempting to reconnect...", file=sys.stderr)
+                cap.release()
+                cap = cv2.VideoCapture(STREAM_URL)
+                if not cap.isOpened():
+                    print(f"Error: Could not reconnect to {STREAM_URL}. Retrying in 2 seconds...", file=sys.stderr)
+                    time.sleep(2)
+                    continue
+                print("Reconnected to IP Webcam stream.")
+                continue
+            
+            # Flip the image horizontally for a selfie-view display
+            image = cv2.flip(image, 1)
+            
+            # Convert the BGR image to RGB
+            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            results = hands.process(rgb_image)
+            
+            # Current time for cooldown
+            current_time = time.time()
+            
+            # Clear debug area
+            if debug_mode:
+                cv2.rectangle(image, (5, 100), (500, 480), (0, 0, 0), -1)
+            
+            # Draw hand landmarks
+            if results.multi_hand_landmarks:
+                for hand_landmarks in results.multi_hand_landmarks:
+                    mp_drawing.draw_landmarks(
+                        image, hand_landmarks, mp_hands.HAND_CONNECTIONS)
                     
-                    # New gestures for switch and light control
-                    elif is_open_palm(hand_landmarks, image):
-                        action_text = "SWITCHES ALL ON"
-                        text_display_end = current_time + 2
-                        last_command_time = current_time
+                    # Display debug info for finger positions
+                    if debug_mode:
+                        debug_finger_positions(hand_landmarks, image)
+                    
+                    # Gesture recognition
+                    if current_time - last_command_time > cooldown:
+                        if is_thumb_up(hand_landmarks, image):
+                            action_text = "UNLOCKING DOOR"
+                            text_display_end = current_time + 2
+                            last_command_time = current_time
+                            
+                            mqtt_message = {
+                                "name": door_name,
+                                "state": "unlock"
+                            }
+                            publish_message(mqtt_topic, mqtt_message)
+                            
+                        elif is_thumb_down(hand_landmarks, image):
+                            action_text = "LOCKING DOOR"
+                            text_display_end = current_time + 2
+                            last_command_time = current_time
+                            
+                            mqtt_message = {
+                                "name": door_name,
+                                "state": "lock"
+                            }
+                            publish_message(mqtt_topic, mqtt_message)
                         
-                        # Send MQTT message for all switches on
-                        mqtt_message = {
-                            "name": "CMD_SWITCH_ALL",
-                            "state": "on"
-                        }
-                        publish_message(mqtt_topic, mqtt_message)
-                        
-                    elif is_number_one(hand_landmarks, image):
-                        action_text = "SWITCHES ALL OFF"
-                        text_display_end = current_time + 2
-                        last_command_time = current_time
-                        
-                        # Send MQTT message for all switches off
-                        mqtt_message = {
-                            "name": "CMD_SWITCH_ALL",
-                            "state": "off"
-                        }
-                        publish_message(mqtt_topic, mqtt_message)
-                        
-                    elif is_number_two(hand_landmarks, image):
-                        action_text = "LIGHTS ALL ON"
-                        text_display_end = current_time + 2
-                        last_command_time = current_time
-                        
-                        # Send MQTT message for all lights on
-                        mqtt_message = {
-                            "name": "CMD_LIGHT_ALL",
-                            "state": "on"
-                        }
-                        publish_message(mqtt_topic, mqtt_message)
-                        
-                    elif is_rock_on(hand_landmarks, image):
-                        action_text = "LIGHTS ALL OFF"
-                        text_display_end = current_time + 2
-                        last_command_time = current_time
-                        
-                        # Send MQTT message for all lights off
-                        mqtt_message = {
-                            "name": "CMD_LIGHT_ALL",
-                            "state": "off"
-                        }
-                        publish_message(mqtt_topic, mqtt_message)
-        
-        # Display action text if within display time
-        if current_time < text_display_end:
-            # Draw a background for better visibility
-            cv2.rectangle(image, (40, 30), (400, 70), (0, 0, 0), -1)
-            cv2.putText(image, action_text, (50, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        
-        # Show command cooldown timer
-        if current_time - last_command_time < cooldown:
-            countdown = int(cooldown - (current_time - last_command_time)) + 1
-            cv2.putText(image, f"Cooldown: {countdown}s", (image.shape[1] - 200, 30), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        
-        # Display MQTT status
-        if client.is_connected():
-            mqtt_status = "Connected"
-        else:
-            mqtt_status = "Disconnected"
-        cv2.putText(image, f"MQTT: {mqtt_status}", (10, 30), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        
-        # Display debug toggle instruction
-        cv2.putText(image, "Press 'D' to toggle debug info", (image.shape[1] - 250, 60), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        
-        # Display legend for gestures
-        y_start = image.shape[0] - 140  # Start position for gesture legend
-        cv2.putText(image, "Gesture Legend:", (10, y_start), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(image, "Thumb Up: Door UNLOCK", (10, y_start + 20), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(image, "Thumb Down: Door LOCK", (10, y_start + 40), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(image, "Open Palm: SWITCHES ALL ON", (10, y_start + 60), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(image, "Number One: SWITCHES ALL OFF", (10, y_start + 80), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(image, "Number Two: LIGHTS ALL ON", (10, y_start + 100), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(image, "Rock On: LIGHTS ALL OFF", (10, y_start + 120), 
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        
-        # Display the image
-        cv2.imshow('Smart Home Control with Hand Gestures', image)
-        
-        # Process keyboard input
-        key = cv2.waitKey(5) & 0xFF
-        if key == 27:  # ESC key to exit
-            break
-        elif key == ord('d') or key == ord('D'):  # D key to toggle debug
-            debug_mode = not debug_mode
+                        elif is_open_palm(hand_landmarks, image):
+                            action_text = "SWITCHES ALL ON"
+                            text_display_end = current_time + 2
+                            last_command_time = current_time
+                            
+                            mqtt_message = {
+                                "name": "CMD_SWITCH_ALL",
+                                "state": "on"
+                            }
+                            publish_message(mqtt_topic, mqtt_message)
+                            
+                        elif is_number_one(hand_landmarks, image):
+                            action_text = "SWITCHES ALL OFF"
+                            text_display_end = current_time + 2
+                            last_command_time = current_time
+                            
+                            mqtt_message = {
+                                "name": "CMD_SWITCH_ALL",
+                                "state": "off"
+                            }
+                            publish_message(mqtt_topic, mqtt_message)
+                            
+                        elif is_number_two(hand_landmarks, image):
+                            action_text = "LIGHTS ALL ON"
+                            text_display_end = current_time + 2
+                            last_command_time = current_time
+                            
+                            mqtt_message = {
+                                "name": "CMD_LIGHT_ALL",
+                                "state": "on"
+                            }
+                            publish_message(mqtt_topic, mqtt_message)
+                            
+                        elif is_rock_on(hand_landmarks, image):
+                            action_text = "LIGHTS ALL OFF"
+                            text_display_end = current_time + 2
+                            last_command_time = current_time
+                            
+                            mqtt_message = {
+                                "name": "CMD_LIGHT_ALL",
+                                "state": "off"
+                            }
+                            publish_message(mqtt_topic, mqtt_message)
+            
+            # Display action text if within display time
+            if current_time < text_display_end:
+                cv2.rectangle(image, (40, 30), (400, 70), (0, 0, 0), -1)
+                cv2.putText(image, action_text, (50, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+            # Show command cooldown timer
+            if current_time - last_command_time < cooldown:
+                countdown = int(cooldown - (current_time - last_command_time)) + 1
+                cv2.putText(image, f"Cooldown: {countdown}s", (image.shape[1] - 200, 30), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            
+            # Display MQTT status
+            if client.is_connected():
+                mqtt_status = "Connected"
+            else:
+                mqtt_status = "Disconnected"
+            cv2.putText(image, f"MQTT: {mqtt_status}", (10, 30), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            
+            # Display debug toggle instruction
+            cv2.putText(image, "Press 'D' to toggle debug info", (image.shape[1] - 250, 60), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            
+            # Display legend for gestures
+            y_start = image.shape[0] - 140
+            cv2.putText(image, "Gesture Legend:", (10, y_start), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(image, "Thumb Up: Door UNLOCK", (10, y_start + 20), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(image, "Thumb Down: Door LOCK", (10, y_start + 40), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(image, "Open Palm: SWITCHES ALL ON", (10, y_start + 60), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(image, "Number One: SWITCHES ALL OFF", (10, y_start + 80), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(image, "Number Two: LIGHTS ALL ON", (10, y_start + 100), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(image, "Rock On: LIGHTS ALL OFF", (10, y_start + 120), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            
+            # Display the image
+            cv2.imshow('Smart Home Control with Hand Gestures', image)
+            
+            # Process keyboard input
+            key = cv2.waitKey(5) & 0xFF
+            if key == 27:  # ESC key to exit
+                break
+            elif key == ord('d') or key == ord('D'):  # D key to toggle debug
+                debug_mode = not debug_mode
     
-    # Clean up
-    cap.release()
-    cv2.destroyAllWindows()
-    client.loop_stop()
-    client.disconnect()
+    except KeyboardInterrupt:
+        print("\nCtrl+C detected. Stopping camera feed...")
+    finally:
+        # Clean up
+        cap.release()
+        cv2.destroyAllWindows()
+        client.loop_stop()
+        client.disconnect()
+        print("Camera feed and MQTT client stopped.")
 
 if __name__ == "__main__":
     main()
