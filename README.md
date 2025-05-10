@@ -61,8 +61,13 @@ sudo apt install -y docker.io docker-compose
 sudo systemctl start docker
 sudo systemctl enable docker
 sudo usermod -aG docker $USER
-newgrp docker
+newgrp 
 ```
+#### Also can use Docker Desktop
+```bash
+https://www.docker.com/products/docker-desktop/
+```
+
 
 **Note**: Log out and back in for group changes to take effect.
 
@@ -233,10 +238,10 @@ mosquitto_sub -h test.mosquitto.org -p 1883 -t "rhasspy/intent/recognized" -v
 ## Development
 
 ### Testing
-- Test scripts are available in the `test` folder.
+- Unit Test scripts are available in the `test` folder.
 - Review and adapt these scripts to verify functionality or customize for your setup.
 
 ---
 
-## to run the gedture_control_system in ubuntu,first run the following:
+## to run the gesture_control_system in ubuntu,first run the following:
 pip install -r ubuntu_requirements.txt
