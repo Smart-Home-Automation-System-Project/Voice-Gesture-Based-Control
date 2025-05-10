@@ -11,7 +11,7 @@ from rhasspy.mqtt_subscriber import on_connect
 
 class TestMQTTSubscriber(unittest.TestCase):
 
-    @patch("rhasspy.mqtt_subscriber.TOPICS", ["test/topic1", "test/topic2"])
+    @patch("rhasspy_voice.mqtt_subscriber.TOPICS", ["test/topic1", "test/topic2"])
     def test_on_connect_success(self):
         # Mock the MQTT client
         mock_client = MagicMock()
