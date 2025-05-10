@@ -1,3 +1,15 @@
+'''
+test cases :
+1	The system sends a proper open/close signal to the smart door
+2	The system should stop safely and release camera resources	
+3	Pressing the key activates/deactivates gesture detail overlay	
+4	Test detection of thumb up gesture with mock hand landmarks	Gesture is correctly identified as thumb up	
+5   Test detection of thumb down gesture with mock hand landmarks	Gesture is correctly identified as thumb down
+6   Test detection of open palm gesture with mock hand landmarks	Gesture is correctly identified as open palm
+7   Test detection of number one gesture (index finger up) with mock hand landmarks	Gesture is correctly identified as number one	
+8   Test detection of number two gesture (victory sign) with mock hand landmarks	Gesture is correctly identified as number two	
+9   Test detection of rock on gesture (index and pinky up) with mock hand landmarks	Gesture is correctly identified as rock on
+'''
 import sys
 import os
 from unittest.mock import patch, MagicMock
