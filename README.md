@@ -183,7 +183,7 @@ Make sure to check "Add Python to PATH" during installation
 
 
 Install dependencies:
-cmdpip install opencv-python mediapipe numpy paho-mqtt
+pip install opencv-python mediapipe numpy paho-mqtt
 
 Install Visual C++ Redistributable (required for MediaPipe):
 
@@ -216,9 +216,9 @@ Windows
 
 Open Command Prompt
 Run the script:
-cmdpython gesture_control.py
+python gesture_control.py
 To monitor MQTT messages (in a separate Command Prompt):
-cmdpython mqtt_listener.py (for this need to run gesture_mosquitto.py)
+python mqtt_listener.py (for this need to run gesture_mosquitto.py)
 -------------------
 Ubuntu
 
