@@ -21,7 +21,7 @@ client.on_message = on_message
 
 # Connect to the broker
 print("Connecting to MQTT broker test.mosquitto.org...")
-client.connect("test.mosquitto.org", 1883, 60)
+client.connect("mqtt.localhost", 1883, 60)
 
 # Start the loop to process network traffic
 print("Starting MQTT listener...")
