@@ -186,6 +186,8 @@ gesture_control.py - The final file with the above change for identifying all ge
      --profile en
    ```
 2. Access the **Rhasspy Web UI** at: [http://localhost:12101/](http://localhost:12101/).
+copy paste the sentence.ini texts into sentence tab of Rhasspy web UI.
+
 
 ##### MQTT Setup
 1. **Install Mosquitto (MQTT Broker)**:

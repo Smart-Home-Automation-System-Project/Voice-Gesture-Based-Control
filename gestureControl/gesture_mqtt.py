@@ -17,13 +17,14 @@ hands = mp_hands.Hands(
 mp_drawing = mp.solutions.drawing_utils
 
 # MQTT Configuration
-#mqtt_broker = "test.mosquitto.org"  # Public MQTT broker for testing
-mqtt_broker = "mqtt.localhost"  # Local MQTT broker
+mqtt_broker = "mqtt.local"  # Local MQTT broker
 mqtt_port = 1883
 mqtt_topic = "central_main/control"  # Updated topic for central system
+mqtt_username = "admin"  # Added MQTT username
+mqtt_password = "1234"   # Added MQTT password
 
 # Device configuration
-door_name = "Font Door"  # Name of the door to control
+door_name = "Front Door"  # Name of the door to control
 
 # MQTT Callbacks
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -39,6 +40,10 @@ def on_publish(client, userdata, mid, properties=None):
 client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
 client.on_connect = on_connect
 client.on_publish = on_publish
+
+# Set MQTT credentials
+client.username_pw_set(username=mqtt_username, password=mqtt_password)  # Added authentication
+
 client.connect(mqtt_broker, mqtt_port)
 client.loop_start()  # Start the background thread
 
@@ -256,11 +261,18 @@ def debug_finger_positions(hand_landmarks, image):
 def main(mqtt_client=None):
     # Use the provided MQTT client or create a new one
     global client
-    client = mqtt_client or mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
-    client.on_connect = on_connect
-    client.on_publish = on_publish
-    client.connect(mqtt_broker, mqtt_port)
-    client.loop_start()  # Start the background thread
+    if mqtt_client is None:
+        client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+        client.on_connect = on_connect
+        client.on_publish = on_publish
+        
+        # Set MQTT credentials
+        client.username_pw_set(username=mqtt_username, password=mqtt_password)
+        
+        client.connect(mqtt_broker, mqtt_port)
+        client.loop_start()  # Start the background thread
+    else:
+        client = mqtt_client
 
     # Open webcam
     cap = cv2.VideoCapture(0)
@@ -402,7 +414,7 @@ def main(mqtt_client=None):
             mqtt_status = "Connected"
         else:
             mqtt_status = "Disconnected"
-        cv2.putText(image, f"MQTT: {mqtt_status}", (10, 30), 
+        cv2.putText(image, f"MQTT: {mqtt_status} (mqtt.local:1883)", (10, 30), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
         # Display debug toggle instruction
