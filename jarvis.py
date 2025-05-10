@@ -11,6 +11,9 @@ import time
 import threading
 from pocketsphinx import LiveSpeech, get_model_path
 
+# Import the new parser function
+from intent_parser import parse_rhasspy_intent
+
 # --- Configuration ---
 RHASSPY_URL = "http://localhost:12101"
 STT_ENDPOINT = f"{RHASSPY_URL}/api/speech-to-text"
@@ -86,21 +89,22 @@ def get_intent_from_text(text):
         print(f"Error during NLU request: {e}", file=sys.stderr)
         return None
 
-def publish_intent_external(topic, intent_name, confidence, slots=None):
+# Modified to accept a payload dictionary
+def publish_intent_external(topic, payload_dict):
     global intent_publisher_client
     if not intent_publisher_client or not intent_publisher_client.is_connected():
         print("Intent publishing MQTT client not connected.", file=sys.stderr)
         return False
-    message_dict = {"intent": intent_name, "confidence": confidence}
-    if slots: message_dict["slots"] = slots
-    message_json = json.dumps(message_dict)
+    
+    message_json = json.dumps(payload_dict) # Convert the dictionary to a JSON string
+    
     result = intent_publisher_client.publish(topic, message_json)
     status = result.rc
     if status == mqtt.MQTT_ERR_SUCCESS:
         print(f"Intent published to EXTERNAL MQTT topic {topic}: {message_json}")
         return True
     else:
-        print(f"Failed to send message to EXTERNAL topic {topic} (Error: {status})")
+        print(f"Failed to send message to EXTERNAL topic {topic} (Error code: {status})")
         return False
 
 # --- Wake Word and Command Handling ---
@@ -116,14 +120,22 @@ def process_command_after_wake():
             intent_result = get_intent_from_text(text)
             if intent_result and intent_result.get('intent') and intent_result['intent'].get('name'):
                 intent_name = intent_result['intent']['name']
-                confidence = intent_result['intent'].get('confidence', 0.0)
-                slots = intent_result.get('slots', {})
-                print("\n--- Recognized Intent ---")
+                # confidence = intent_result['intent'].get('confidence', 0.0) # Available if needed
+                # slots = intent_result.get('slots', {}) # Available if needed
+
+                print("\n--- Recognized Intent (Raw from Rhasspy) ---")
                 print(f"Intent: {intent_name}")
-                print(f"Confidence: {confidence:.2f}")
-                if slots: print(f"Slots: {slots}")
-                print("-------------------------")
-                publish_intent_external(EXTERNAL_MQTT_INTENT_TOPIC, intent_name, confidence, slots)
+                print(f"Confidence: {intent_result['intent'].get('confidence', 'N/A')}")
+                print("------------------------------------------")
+
+                # Parse the Rhasspy intent to your custom format
+                custom_payload = parse_rhasspy_intent(intent_name)
+
+                if custom_payload:
+                    # Publish the new custom payload
+                    publish_intent_external(EXTERNAL_MQTT_INTENT_TOPIC, custom_payload)
+                else:
+                    print(f"Intent '{intent_name}' not mapped to custom payload. Not publishing.")
             else:
                 print("Could not recognize a valid intent from text.")
         else:
@@ -140,7 +152,7 @@ def main_loop():
     global is_processing_command, intent_publisher_client
 
     try:
-        intent_publisher_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="jarvis_intent_publisher_ps")
+        intent_publisher_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="jarvis_intent_publisher_ps_custom")
         intent_publisher_client.on_connect = on_connect_intent_publisher
         intent_publisher_client.on_publish = on_publish_intent_publisher
         print(f"Connecting to Intent Publishing MQTT broker {EXTERNAL_MQTT_BROKER}...")
@@ -152,16 +164,39 @@ def main_loop():
 
         print(f"\nListening for wake word '{WAKE_WORD}' with LiveSpeech (Threshold: {POCKETSPHINX_THRESHOLD})... Press Ctrl+C to stop.")
 
-        for phrase in LiveSpeech(keyphrase=WAKE_WORD, kws_threshold=POCKETSPHINX_THRESHOLD):
-            print(f"Wake word '{WAKE_WORD}' detected by LiveSpeech: {phrase}")
-            with processing_lock:
-                if is_processing_command:
-                    continue
-                is_processing_command = True
+        # Ensure LiveSpeech uses the correct sample rate if it's not default
+        # LiveSpeech defaults to 16000, which matches our SAMPLE_RATE
+        speech = LiveSpeech(
+            verbose=False,
+            sampling_rate=SAMPLE_RATE, # Explicitly set, though default is 16000
+            buffer_size=2048,
+            no_search=False,
+            full_utt=False,
+            hmm=get_model_path('en-us'),
+            lm=None, # Using keyphrase spotting, so no language model needed here
+            dic=get_model_path('cmudict-en-us.dict'),
+            keyphrase=WAKE_WORD,
+            kws_threshold=POCKETSPHINX_THRESHOLD
+        )
 
-            thread = threading.Thread(target=process_command_after_wake)
-            thread.daemon = True
-            thread.start()
+        for phrase in speech:
+            # phrase object contains segments, we are interested in the text
+            detected_text = str(phrase).strip().lower()
+            # LiveSpeech with keyphrase might sometimes yield the phrase itself or parts of it.
+            # We confirm if our WAKE_WORD is in what's detected.
+            if WAKE_WORD in detected_text:
+                print(f"Wake word '{WAKE_WORD}' detected by LiveSpeech: {detected_text}")
+                with processing_lock:
+                    if is_processing_command:
+                        continue
+                    is_processing_command = True
+
+                thread = threading.Thread(target=process_command_after_wake)
+                thread.daemon = True
+                thread.start()
+            # else: # Optional: print if something else was transcribed by LiveSpeech
+            #     print(f"LiveSpeech transcribed (no wake word): {detected_text}")
+
 
     except KeyboardInterrupt:
         print("\nCtrl+C detected. Stopping...")
@@ -177,4 +212,5 @@ def main_loop():
         print("Script finished.")
 
 if __name__ == "__main__":
+    # Ensure intent_parser.py is in the same directory or Python's path
     main_loop()

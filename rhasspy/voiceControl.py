@@ -9,16 +9,13 @@ import os
 import paho.mqtt.client as mqtt
 import time
 
-# Import the new parser function
-from intent_parser import parse_rhasspy_intent
-
 # --- Configuration ---
 RHASSPY_URL = "http://localhost:12101"
 STT_ENDPOINT = f"{RHASSPY_URL}/api/speech-to-text"
 NLU_ENDPOINT = f"{RHASSPY_URL}/api/text-to-intent"
 
 # External MQTT (for publishing results)
-EXTERNAL_MQTT_BROKER = "broker.localhost" #"test.mosquitto.org" #"localhost"
+EXTERNAL_MQTT_BROKER = "mqtt.localhost"   #test.mosquitto.org #localhost
 EXTERNAL_MQTT_PORT = 1883
 EXTERNAL_MQTT_INTENT_TOPIC = "rhasspy/intent/recognized"
 
@@ -87,15 +84,13 @@ def get_intent_from_text(text):
         time.sleep(2)
         return None
 
-# Modified to accept a payload dictionary
-def publish_intent_external(topic, payload_dict):
+def publish_intent_external(topic, intent_name, confidence):
     global external_mqtt_client
     if not external_mqtt_client or not external_mqtt_client.is_connected():
         print("External MQTT client not connected. Cannot publish intent.", file=sys.stderr)
         return False # Indicate failure
-    
-    message_json = json.dumps(payload_dict) # Convert the dictionary to a JSON string
-    
+    message_dict = {"intent": intent_name, "confidence": confidence}
+    message_json = json.dumps(message_dict)
     result = external_mqtt_client.publish(topic, message_json)
     status = result.rc
     if status == mqtt.MQTT_ERR_SUCCESS:
@@ -139,25 +134,14 @@ if __name__ == "__main__":
 
                     if intent_result and intent_result.get('intent'):
                         intent_name = intent_result['intent'].get('name', 'UnknownIntent')
-                        # Confidence is available in intent_result['intent'].get('confidence')
-                        # but not used in the new payload format as per your example.
-
-                        print("\n--- Recognized Intent (Raw from Rhasspy) ---")
+                        confidence = intent_result['intent'].get('confidence', 'N/A')
+                        print("\n--- Recognized Intent ---")
                         print(f"Intent: {intent_name}")
-                        print(f"Confidence: {intent_result['intent'].get('confidence', 'N/A')}")
-                        print("------------------------------------------")
+                        print(f"Confidence: {confidence}")
+                        print("-------------------------")
 
-                        # 4. Parse the Rhasspy intent to your custom format
-                        custom_payload = parse_rhasspy_intent(intent_name)
-
-                        if custom_payload:
-                            # 5. Publish the new custom payload
-                            publish_intent_external(EXTERNAL_MQTT_INTENT_TOPIC, custom_payload)
-                        else:
-                            # If parse_rhasspy_intent returned None, it means the intent
-                            # was not mapped in intent_parser.py.
-                            # You can decide to log this, do nothing, or publish a default/error.
-                            print(f"Intent '{intent_name}' not mapped to custom payload. Not publishing.")
+                        # 4. Publish to external MQTT
+                        publish_intent_external(EXTERNAL_MQTT_INTENT_TOPIC, intent_name, confidence)
                     else:
                         print("Could not recognize intent from text.")
                 else:
