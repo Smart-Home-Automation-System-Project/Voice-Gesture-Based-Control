@@ -1,5 +1,3 @@
-Sure! Here's a structured **README** file for your GitHub repository:
-
 ```markdown
 # Rhasspy Voice Assistant Setup
 
