@@ -5,9 +5,12 @@ import numpy as np
 from scipy.io.wavfile import write
 import io
 import json
+import os
 import paho.mqtt.client as mqtt
 import time
-import uuid
+
+# Import the new parser function
+from intent_parser import parse_rhasspy_intent
 
 # --- Configuration ---
 RHASSPY_URL = "http://localhost:12101"
@@ -15,15 +18,14 @@ STT_ENDPOINT = f"{RHASSPY_URL}/api/speech-to-text"
 NLU_ENDPOINT = f"{RHASSPY_URL}/api/text-to-intent"
 
 # External MQTT (for publishing results)
-EXTERNAL_MQTT_BROKER = "test.mosquitto.org"
+EXTERNAL_MQTT_BROKER = "broker.localhost" #"test.mosquitto.org" #"localhost"
 EXTERNAL_MQTT_PORT = 1883
 EXTERNAL_MQTT_INTENT_TOPIC = "rhasspy/intent/recognized"
-CONTROL_TOPIC = "central_main/control"
 
 # Recording parameters
 SAMPLE_RATE = 16000  # Hz
-COMMAND_DURATION = 5  # Seconds to record command
-CHANNELS = 1        # mono
+COMMAND_DURATION = 5 # Seconds to record command
+CHANNELS = 1       # mono
 
 # --- MQTT Client ---
 external_mqtt_client = None
@@ -36,6 +38,7 @@ def on_connect_external(client, userdata, flags, reason_code, properties):
         print(f"Failed to connect to External MQTT Broker, reason code {reason_code}")
 
 def on_publish_external(client, userdata, mid, reason_code, properties):
+    # print(f"External message {mid} published (Reason Code: {reason_code})")
     pass
 
 # --- Audio & Processing Functions ---
@@ -84,81 +87,31 @@ def get_intent_from_text(text):
         time.sleep(2)
         return None
 
-def generate_control_token(intent_data):
-    """Generate MQTT control token based on intent data."""
-    intent_name = intent_data['intent'].get('name', '')
-    slots = intent_data.get('slots', {})
-
-    # Default token structure
-    token = None
-
-    # Door control (LOCK/UNLOCK)
-    if intent_name == 'LockDoor':
-        door_name = slots.get('door', 'Font Door')  # Default to Font Door if not specified
-        token = {"name": door_name, "state": "lock"}
-    elif intent_name == 'UnlockDoor':
-        door_name = slots.get('door', 'Font Door')
-        token = {"name": door_name, "state": "unlock"}
-
-    # Switch/Light control (ON/OFF)
-    elif intent_name == 'TurnOnDevice':
-        device_name = slots.get('device', 'LivingRoom L1')  # Default to LivingRoom L1
-        token = {"name": device_name, "state": "on"}
-    elif intent_name == 'TurnOffDevice':
-        device_name = slots.get('device', 'LivingRoom L1')
-        token = {"name": device_name, "state": "off"}
-
-    # Batch mode control
-    elif intent_name == 'BatchControl':
-        control_type = slots.get('type', '').lower()
-        state = slots.get('state', '').lower()
-        if control_type == 'switches' and state in ['on', 'off']:
-            token = {"name": "CMD_SWITCH_ALL", "state": state}
-        elif control_type == 'lights' and state in ['on', 'off']:
-            token = {"name": "CMD_LIGHT_ALL", "state": state}
-        elif control_type == 'doors' and state in ['lock', 'unlock']:
-            token = {"name": "CMD_DOOR_ALL", "state": state}
-
-    return token
-
-def publish_intent_external(topic, intent_name, confidence):
+# Modified to accept a payload dictionary
+def publish_intent_external(topic, payload_dict):
     global external_mqtt_client
     if not external_mqtt_client or not external_mqtt_client.is_connected():
         print("External MQTT client not connected. Cannot publish intent.", file=sys.stderr)
-        return False
-    message_dict = {"intent": intent_name, "confidence": confidence}
-    message_json = json.dumps(message_dict)
+        return False # Indicate failure
+    
+    message_json = json.dumps(payload_dict) # Convert the dictionary to a JSON string
+    
     result = external_mqtt_client.publish(topic, message_json)
     status = result.rc
     if status == mqtt.MQTT_ERR_SUCCESS:
         print(f"Intent published to EXTERNAL MQTT topic {topic}: {message_json}")
-        return True
+        return True # Indicate success
     else:
         print(f"Failed to send message to EXTERNAL topic {topic} (Error code: {status})")
-        return False
-
-def publish_control_token(topic, token):
-    global external_mqtt_client
-    if not external_mqtt_client or not external_mqtt_client.is_connected():
-        print("External MQTT client not connected. Cannot publish control token.", file=sys.stderr)
-        return False
-    if not token:
-        print("No valid control token to publish.", file=sys.stderr)
-        return False
-    message_json = json.dumps(token)
-    result = external_mqtt_client.publish(topic, message_json)
-    status = result.rc
-    if status == mqtt.MQTT_ERR_SUCCESS:
-        print(f"Control token published to MQTT topic {topic}: {message_json}")
-        return True
-    else:
-        print(f"Failed to send control token to topic {topic} (Error code: {status})")
-        return False
+        return False # Indicate failure
 
 # --- Main Execution ---
-if __name__ == "__main__":
+# Encapsulate the main logic into a function
+def run_voice_control_system():
+    global external_mqtt_client # Ensure we're using the global client
+
     # Initialize External MQTT Client
-    external_mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=f"voice_control_{str(uuid.uuid4())}")
+    external_mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     external_mqtt_client.on_connect = on_connect_external
     external_mqtt_client.on_publish = on_publish_external
 
@@ -166,10 +119,11 @@ if __name__ == "__main__":
         # Connect to External Broker
         print(f"Connecting to External MQTT broker {EXTERNAL_MQTT_BROKER}...")
         external_mqtt_client.connect(EXTERNAL_MQTT_BROKER, EXTERNAL_MQTT_PORT, 60)
-        external_mqtt_client.loop_start()
+        external_mqtt_client.loop_start() # Start background thread
+        # Wait briefly for connection to establish
         time.sleep(1)
         if not external_mqtt_client.is_connected():
-            raise ConnectionError("Failed to connect to external MQTT broker.")
+             raise ConnectionError("Failed to connect to external MQTT broker.")
 
         # --- Continuous Loop ---
         print("\nStarting continuous voice control loop (Press Ctrl+C to stop)...")
@@ -188,21 +142,25 @@ if __name__ == "__main__":
 
                     if intent_result and intent_result.get('intent'):
                         intent_name = intent_result['intent'].get('name', 'UnknownIntent')
-                        confidence = intent_result['intent'].get('confidence', 'N/A')
-                        print("\n--- Recognized Intent ---")
+                        # Confidence is available in intent_result['intent'].get('confidence')
+                        # but not used in the new payload format as per your example.
+
+                        print("\n--- Recognized Intent (Raw from Rhasspy) ---")
                         print(f"Intent: {intent_name}")
-                        print(f"Confidence: {confidence}")
-                        print("-------------------------")
+                        print(f"Confidence: {intent_result['intent'].get('confidence', 'N/A')}")
+                        print("------------------------------------------")
 
-                        # 4. Publish original intent
-                        publish_intent_external(EXTERNAL_MQTT_INTENT_TOPIC, intent_name, confidence)
+                        # 4. Parse the Rhasspy intent to your custom format
+                        custom_payload = parse_rhasspy_intent(intent_name)
 
-                        # 5. Generate and publish control token
-                        control_token = generate_control_token(intent_result)
-                        if control_token:
-                            publish_control_token(CONTROL_TOPIC, control_token)
+                        if custom_payload:
+                            # 5. Publish the new custom payload
+                            publish_intent_external(EXTERNAL_MQTT_INTENT_TOPIC, custom_payload)
                         else:
-                            print("No control token generated for this intent.")
+                            # If parse_rhasspy_intent returned None, it means the intent
+                            # was not mapped in intent_parser.py.
+                            # You can decide to log this, do nothing, or publish a default/error.
+                            print(f"Intent '{intent_name}' not mapped to custom payload. Not publishing.")
                     else:
                         print("Could not recognize intent from text.")
                 else:
@@ -212,21 +170,24 @@ if __name__ == "__main__":
                 time.sleep(1)
 
     except ConnectionError as e:
-        print(f"MQTT Connection Error: {e}", file=sys.stderr)
+         print(f"MQTT Connection Error: {e}", file=sys.stderr)
     except KeyboardInterrupt:
-        print("\nCtrl+C detected. Stopping continuous loop...")
+        print("\nCtrl+C detected. Stopping voice control loop...")
     except Exception as e:
-        print(f"An unexpected error occurred: {e}", file=sys.stderr)
+        print(f"An unexpected error occurred in voice control: {e}", file=sys.stderr)
     finally:
         if external_mqtt_client and external_mqtt_client.is_connected():
             external_mqtt_client.loop_stop()
             external_mqtt_client.disconnect()
-            print("\nExternal MQTT client stopped and disconnected.")
+            print("\nVoice control external MQTT client stopped and disconnected.")
         elif external_mqtt_client:
-            try:
-                external_mqtt_client.disconnect()
-            except Exception:
-                pass
-            print("\nExternal MQTT client stopped (was not connected or loop not started).")
+             try:
+                 external_mqtt_client.disconnect()
+             except Exception: pass
+             print("\nVoice control external MQTT client stopped (was not connected or loop not started).")
 
-        print("Script finished.")
+        print("Voice control script finished.")
+
+
+if __name__ == "__main__":
+    run_voice_control_system()
