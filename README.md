@@ -247,5 +247,3 @@ mosquitto_sub -h test.mosquitto.org -p 1883 -t "rhasspy/intent/recognized" -v
 - Review and adapt these scripts to verify functionality or customize for your setup.
 
 ---
-
-pip install -r ubuntu_requirements.txt
