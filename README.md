@@ -165,7 +165,7 @@ Messages are published in JSON format:
 - mqtt_listener.py - Used for testing purposes with the above 2 files. 
 In Windows - We checked whether gesture commands identifying and mqtt message sending are working correctly by running mqtt_listener.py in one command prompt and gesture_mosquitto.py or door_mosquitto.py in another command prompt. 
 - door_mqtt.py - Similar to the above door_mosquitto.py but mqtt broker ip.address changed to mqtt.local
-gesture_mqtt.py - The final file with the above change for identifying all gesture based commands. 
+gesture_control.py - The final file with the above change for identifying all gesture based commands.
 
 **MQTT Listener**:
 - The `mqtt_listener.py` script connects to the MQTT broker, subscribes to the `central_main/control` topic, and prints received messages for debugging.
