@@ -227,6 +227,11 @@ mosquitto_sub -h test.mosquitto.org -p 1883 -t "rhasspy/intent/recognized" -v
 1. Ensure Docker and Mosquitto are running.
 2. Configure `sentences.ini` in the Rhasspy Web UI.
 3. Run `voiceControl.py` to process voice commands.
+4. To run the gesture_control_system in `ubuntu`
+   first run the following
+   ```bash
+   pip install -r ubuntu_requirements.txt
+   ```
 
 ---
 
@@ -238,5 +243,3 @@ mosquitto_sub -h test.mosquitto.org -p 1883 -t "rhasspy/intent/recognized" -v
 
 ---
 
-## to run the gedture_control_system in ubuntu,first run the following:
-pip install -r ubuntu_requirements.txt
