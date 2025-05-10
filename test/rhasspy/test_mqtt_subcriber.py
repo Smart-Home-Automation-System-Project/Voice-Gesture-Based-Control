@@ -7,7 +7,7 @@ import unittest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # Import the mqtt_subscriber module from the rhasspy package
-from rhasspy.mqtt_subscriber import on_connect
+from rhasspy_voice.mqtt_subscriber import on_connect
 
 class TestMQTTSubscriber(unittest.TestCase):
 

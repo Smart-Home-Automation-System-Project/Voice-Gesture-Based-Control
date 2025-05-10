@@ -58,41 +58,63 @@ class TestPublishIntentExternal(unittest.TestCase):
     def test_publish_intent_external_success(self):
         self.mock_mqtt_client.is_connected.return_value = True
         self.mock_mqtt_client.publish.return_value.rc = 0
+        # Create a sample payload dictionary
+        sample_payload = {"name": "TestDevice", "state": "on"}
         result = voiceControl.publish_intent_external(
-            topic="test/topic", intent_name="TestIntent", confidence=0.95)
+            topic="test/topic", payload_dict=sample_payload)
         self.assertTrue(result)
+        self.mock_mqtt_client.publish.assert_called_once_with("test/topic", json.dumps(sample_payload))
 
     def test_publish_intent_external_failure_not_connected(self):
         self.mock_mqtt_client.is_connected.return_value = False
+        sample_payload = {"name": "TestDevice", "state": "on"}
         result = voiceControl.publish_intent_external(
-            topic="test/topic", intent_name="TestIntent", confidence=0.95)
+            topic="test/topic", payload_dict=sample_payload)
         self.assertFalse(result)
 
     def test_publish_intent_external_failure_publish_error(self):
         self.mock_mqtt_client.is_connected.return_value = True
         self.mock_mqtt_client.publish.return_value.rc = 1
+        sample_payload = {"name": "TestDevice", "state": "on"}
         result = voiceControl.publish_intent_external(
-            topic="test/topic", intent_name="TestIntent", confidence=0.95)
+            topic="test/topic", payload_dict=sample_payload)
         self.assertFalse(result)
 
-    def test_publish_intent_external_invalid_confidence(self):
+    # This test case might need re-evaluation.
+    # The function now takes a dict; "invalid confidence" isn't directly applicable
+    # unless it's part of the payload_dict structure you expect.
+    # For now, let's assume a valid payload structure.
+    def test_publish_intent_external_valid_payload_structure(self):
         self.mock_mqtt_client.is_connected.return_value = True
         self.mock_mqtt_client.publish.return_value.rc = 0
+        # Example of a payload that might have come from parse_rhasspy_intent
+        valid_payload = {"name": "l1", "state": "on"}
         result = voiceControl.publish_intent_external(
-            topic="test/topic", intent_name="TestIntent", confidence="invalid_confidence")
+            topic="test/topic", payload_dict=valid_payload)
         self.assertTrue(result)
+        self.mock_mqtt_client.publish.assert_called_once_with("test/topic", json.dumps(valid_payload))
 
-    def test_publish_intent_external_empty_intent_name(self):
+
+    # This test case also needs re-evaluation.
+    # An "empty intent name" would mean parse_rhasspy_intent might return None or a specific dict.
+    # If parse_rhasspy_intent returns None, publish_intent_external wouldn't even be called.
+    # Let's test with a payload that might represent an "empty" or "default" mapping if one exists.
+    # Or, more simply, just ensure it handles a generic dictionary.
+    def test_publish_intent_external_generic_payload(self):
         self.mock_mqtt_client.is_connected.return_value = True
         self.mock_mqtt_client.publish.return_value.rc = 0
+        generic_payload = {"device_id": "unknown", "action": "none"} # Example
         result = voiceControl.publish_intent_external(
-            topic="test/topic", intent_name="", confidence=0.95)
+            topic="test/topic", payload_dict=generic_payload)
         self.assertTrue(result)
+        self.mock_mqtt_client.publish.assert_called_once_with("test/topic", json.dumps(generic_payload))
+
 
     def test_publish_intent_external_null_client(self):
         voiceControl.external_mqtt_client = None
+        sample_payload = {"name": "TestDevice", "state": "on"}
         result = voiceControl.publish_intent_external(
-            topic="test/topic", intent_name="TestIntent", confidence=0.95)
+            topic="test/topic", payload_dict=sample_payload)
         self.assertFalse(result)
 
 if __name__ == "__main__":

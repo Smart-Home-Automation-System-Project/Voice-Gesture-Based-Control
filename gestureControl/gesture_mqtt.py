@@ -17,7 +17,7 @@ hands = mp_hands.Hands(
 mp_drawing = mp.solutions.drawing_utils
 
 # MQTT Configuration
-mqtt_broker = "mqtt.local"  # Local MQTT broker
+mqtt_broker = "mqtt.localhost"  # Local MQTT broker
 mqtt_port = 1883
 mqtt_topic = "central_main/control"  # Updated topic for central system
 mqtt_username = "admin"  # Added MQTT username

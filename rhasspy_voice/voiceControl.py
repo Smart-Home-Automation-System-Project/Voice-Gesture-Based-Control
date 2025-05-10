@@ -10,7 +10,7 @@ import paho.mqtt.client as mqtt
 import time
 
 # Import the new parser function
-from intent_parser import parse_rhasspy_intent
+from .intent_parser import parse_rhasspy_intent
 
 # --- Configuration ---
 RHASSPY_URL = "http://localhost:12101"
@@ -18,7 +18,7 @@ STT_ENDPOINT = f"{RHASSPY_URL}/api/speech-to-text"
 NLU_ENDPOINT = f"{RHASSPY_URL}/api/text-to-intent"
 
 # External MQTT (for publishing results)
-EXTERNAL_MQTT_BROKER = "mqtt.local"#"broker.localhost" #"test.mosquitto.org" #"localhost"
+EXTERNAL_MQTT_BROKER = "mqtt.localhost"#"broker.localhost" #"test.mosquitto.org" #"localhost"
 EXTERNAL_MQTT_PORT = 1883
 EXTERNAL_MQTT_INTENT_TOPIC = "central_main/control"#"rhasspy/intent/recognized"
 
